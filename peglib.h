@@ -766,6 +766,7 @@ public:
 
   const size_t def_count;
   const bool enablePackratParsing;
+  const bool createValuesAfterRecovery;
   std::vector<bool> cache_registered;
   std::vector<bool> cache_success;
 
@@ -781,11 +782,12 @@ public:
 
   Context(const char *path, const char *s, size_t l, size_t def_count,
           std::shared_ptr<Ope> whitespaceOpe, std::shared_ptr<Ope> wordOpe,
-          bool enablePackratParsing, TracerEnter tracer_enter,
-          TracerLeave tracer_leave, std::any trace_data, bool verbose_trace,
-          Log log)
+          bool enablePackratParsing, bool createValuesAfterRecovery,
+          TracerEnter tracer_enter, TracerLeave tracer_leave,
+          std::any trace_data, bool verbose_trace, Log log)
       : path(path), s(s), l(l), whitespaceOpe(whitespaceOpe), wordOpe(wordOpe),
         def_count(def_count), enablePackratParsing(enablePackratParsing),
+        createValuesAfterRecovery(createValuesAfterRecovery),
         cache_registered(enablePackratParsing ? def_count * (l + 1) : 0),
         cache_success(enablePackratParsing ? def_count * (l + 1) : 0),
         tracer_enter(tracer_enter), tracer_leave(tracer_leave),
@@ -2216,7 +2218,8 @@ public:
     SemanticValues vs;
     std::any dt;
     auto r = parse_core(s, n, vs, dt, path, log);
-    if (r.ret && !vs.empty() && vs.front().has_value()) {
+    if ((r.ret || createValuesAfterRecovery) && !vs.empty() 
+        && vs.front().has_value()) {
       val = std::any_cast<T>(vs[0]);
     }
     return r;
@@ -2235,7 +2238,8 @@ public:
                              Log log = nullptr) const {
     SemanticValues vs;
     auto r = parse_core(s, n, vs, dt, path, log);
-    if (r.ret && !vs.empty() && vs.front().has_value()) {
+    if ((r.ret || createValuesAfterRecovery) && !vs.empty() 
+        && vs.front().has_value()) {
       val = std::any_cast<T>(vs[0]);
     }
     return r;
@@ -2345,6 +2349,7 @@ public:
   std::shared_ptr<Ope> whitespaceOpe;
   std::shared_ptr<Ope> wordOpe;
   bool enablePackratParsing = false;
+  bool createValuesAfterRecovery = false;
   bool is_macro = false;
   std::vector<std::string> params;
   bool disable_action = false;
@@ -2390,8 +2395,8 @@ private:
     });
 
     Context c(path, s, n, definition_ids_.size(), whitespaceOpe, wordOpe,
-              enablePackratParsing, tracer_enter, tracer_leave, trace_data,
-              verbose_trace, log);
+              enablePackratParsing, createValuesAfterRecovery, tracer_enter,
+              tracer_leave, trace_data, verbose_trace, log);
 
     size_t i = 0;
 
@@ -2458,8 +2463,8 @@ inline size_t parse_literal(const char *s, size_t n, SemanticValues &vs,
 
     std::call_once(init_is_word, [&]() {
       SemanticValues dummy_vs;
-      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, nullptr,
-                      nullptr, nullptr, false, nullptr);
+      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, false, 
+                      nullptr, nullptr, nullptr, false, nullptr);
       std::any dummy_dt;
 
       auto len =
@@ -2469,8 +2474,8 @@ inline size_t parse_literal(const char *s, size_t n, SemanticValues &vs,
 
     if (is_word) {
       SemanticValues dummy_vs;
-      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, nullptr,
-                      nullptr, nullptr, false, nullptr);
+      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, false,
+                      nullptr, nullptr, nullptr, false, nullptr);
       std::any dummy_dt;
 
       NotPredicate ope(c.wordOpe);
@@ -2654,8 +2659,8 @@ inline size_t Dictionary::parse_core(const char *s, size_t n,
 
     {
       SemanticValues dummy_vs;
-      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, nullptr,
-                      nullptr, nullptr, false, nullptr);
+      Context dummy_c(nullptr, c.s, c.l, 0, nullptr, nullptr, false, false, 
+                      nullptr, nullptr, nullptr, false, nullptr);
       std::any dummy_dt;
 
       NotPredicate ope(c.wordOpe);
@@ -2769,7 +2774,9 @@ inline size_t Holder::parse_core(const char *s, size_t n, SemanticValues &vs,
       }
 
       if (success(len)) {
-        if (!c.recovered) { a_val = reduce(chvs, dt); }
+        if (!c.recovered || c.createValuesAfterRecovery) { 
+            a_val = reduce(chvs, dt); 
+        }
       } else {
         if (c.log && !msg.empty() && c.error_info.message_pos < s) {
           c.error_info.message_pos = s;
@@ -4626,6 +4633,13 @@ public:
     if (grammar_ != nullptr) {
       auto &rule = (*grammar_)[start_];
       rule.verbose_trace = verbose_trace;
+    }
+  }
+  
+  void create_values_after_recovery() {
+    if (grammar_ != nullptr) {
+      auto &rule = (*grammar_)[start_];
+      rule.createValuesAfterRecovery = true;
     }
   }
 
