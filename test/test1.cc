@@ -1233,3 +1233,33 @@ LINE_END               <-  '\r\n' / '\r' / '\n' / !.
   }
 }
 
+TEST(GeneralTest, CreateValuesAfterRecoveryTest)
+{
+  auto parser = peg::parser(R"(
+    ROOT  <- (A^ERROR)*
+    A     <- 'a'
+    ERROR <- .
+  )");
+  parser["ROOT"] = [](const peg::SemanticValues& vs) {
+    std::string s;
+    for (auto ac : vs)
+      s += std::any_cast<char>(ac);
+    return s;
+  };
+  parser["A"] = [](const peg::SemanticValues& /* vs */) {
+    return 'a'; 
+  };
+  auto str = "aba";
+  
+  std::string val;
+  auto ret = parser.parse(str, val);
+  
+  EXPECT_FALSE(ret);
+  EXPECT_EQ(val, "");
+  
+  parser.create_values_after_recovery();
+  ret = parser.parse(str, val);
+  
+  EXPECT_FALSE(ret);
+  EXPECT_EQ(val, "aa");
+}
