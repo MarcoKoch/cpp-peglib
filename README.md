@@ -630,6 +630,10 @@ custom_message.txt:1:8: code format error...
 
 NOTE: If there are more than one elements with error message instruction in a prioritized choice, this feature may not work as you expect.
 
+### Creating semantic values after error recovery
+
+As described above, cpp-peglib continues parsing after an error was handled by a `%recover` operator. By default, no semantic value is returned by the parser if an error was encountered, though. This can be changed by calling method `create_values_after_recovery()` of class `peg::parser`. The parser will then just ignore any errorneous match as if it was marked with ignore operator `~`.
+
 peglint - PEG syntax lint utility
 ---------------------------------
 
