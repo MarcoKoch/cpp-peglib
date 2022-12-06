@@ -33,6 +33,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -2217,7 +2218,7 @@ public:
     std::any dt;
     auto r = parse_core(s, n, vs, dt, path, log);
     if (r.ret && !vs.empty() && vs.front().has_value()) {
-      val = std::any_cast<T>(vs[0]);
+      val = std::move(std::any_cast<std::remove_volatile_t<T>&>(vs[0]));
     }
     return r;
   }
@@ -2236,7 +2237,7 @@ public:
     SemanticValues vs;
     auto r = parse_core(s, n, vs, dt, path, log);
     if (r.ret && !vs.empty() && vs.front().has_value()) {
-      val = std::any_cast<T>(vs[0]);
+      val = std::move(std::any_cast<std::remove_volatile_t<T>&>(vs[0]));
     }
     return r;
   }
