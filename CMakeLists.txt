@@ -23,8 +23,8 @@ endif()
 add_subdirectory(lint)
 
 if (BUILD_EXAMPLES)
-    add_subdirectory(example)
-    # add_subdirectory(cymbol)
+  add_subdirectory(example)
+  # add_subdirectory(cymbol)
 endif ()
 
 if (${BUILD_TESTS})
