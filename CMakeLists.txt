@@ -11,6 +11,7 @@ else()
 endif()
 
 option(BUILD_TESTS "Build cpp-peglib tests" ON)
+option(BUILD_EXAMPLES "Build example programs" ON)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
@@ -21,8 +22,10 @@ endif()
 
 add_subdirectory(lint)
 
-add_subdirectory(example)
-# add_subdirectory(cymbol)
+if (BUILD_EXAMPLES)
+    add_subdirectory(example)
+    # add_subdirectory(cymbol)
+endif ()
 
 if (${BUILD_TESTS})
   add_subdirectory(test)
